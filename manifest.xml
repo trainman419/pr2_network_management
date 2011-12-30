@@ -1,0 +1,15 @@
+<package>
+  <description brief="pr2_network_management">
+
+     pr2_network_management
+
+  </description>
+  <author>Austin Hendrix</author>
+  <license>BSD</license>
+  <review status="unreviewed" notes=""/>
+  <url>http://ros.org/wiki/pr2_network_management</url>
+  <depend package="rospy"/>
+
+</package>
+
+
