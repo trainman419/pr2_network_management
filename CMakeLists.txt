@@ -14,8 +14,11 @@ include($ENV{ROS_ROOT}/core/rosbuild/rosbuild.cmake)
 # variables.
 #list(APPEND CPACK_SOURCE_IGNORE_FILES /core/experimental)
 
-rosbuild_make_distribution(0.1.0)
-
 rosbuild_init()
+
+#set the default path for built executables to the "bin" directory
+set(EXECUTABLE_OUTPUT_PATH ${PROJECT_SOURCE_DIR}/bin)
+#set the default path for built libraries to the "lib" directory
+set(LIBRARY_OUTPUT_PATH ${PROJECT_SOURCE_DIR}/lib)
 
 rosbuild_gensrv()
