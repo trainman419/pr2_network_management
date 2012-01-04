@@ -1,0 +1,3 @@
+<launch>
+	<node name="wifi_manager" pkg="pr2_network_management" type="wifi.py" />
+</launch>
