@@ -1,3 +1,4 @@
+---
 # set up wireless access point
 bool enabled
 string ssid
@@ -8,4 +9,3 @@ int8 WPA2=1
 # no support for WPA2 Enterprise
 # passphrase is ignored if security is NONE
 string passphrase
----
