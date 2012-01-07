@@ -6,6 +6,7 @@ from pr2_network_management.srv import *
 import rospy
 
 import wrt610n
+import ctr350
 
 def handle_local(req):
    rospy.loginfo('Got local wifi request: %s %s'%(
@@ -57,6 +58,16 @@ if __name__ == "__main__":
    client_security = client.get_config('WL_WPATable.asp')
    print client_config
    print client_security
+
+   local = ctr350.ctr350('10.68.0.250', 'willow')
+   local_config = local.get_config()
+   print local_config
+#     print "IP:          ", data['lan_network_address']
+#     print "Password:    ", data['password']
+#     print "SSID:        ", data['wireless']['SSID']
+#     print "WPA enabled: ", data['wireless']['wpa_enabled']
+#     print "WPA mode:    ", data['wireless']['wpa_mode']
+#     print "WPA key:     ", data['wireless']['wpa_psk']
 
    local_srv = rospy.Service('pr2_wifi/local', Wifi, handle_local)
    client_srv = rospy.Service('pr2_wifi/client', Wifi, handle_client)
