@@ -40,11 +40,13 @@ class ctr350:
      self.ipaddr = ipaddr
      self.passwd = passwd
 
-     self.tmp_dir = tempfile.mkdtemp(prefix='cradlepointjs')
-
-     shutil.copy('JSON-js/json2.js', self.tmp_dir)
      # grab a copy of the shutil module so that we still have it during cleanup
      self.shutil = shutil
+
+     self.tmp_dir = tempfile.mkdtemp(prefix='cradlepointjs')
+
+     shutil.copy("%s/nodes/JSON-js/json2.js"%
+           roslib.packages.get_pkg_dir('pr2_network_management'), self.tmp_dir)
    
      files = ["uigenpro.js","fixup_settings.js","createdata.js","pack_all.js"]
      libs = []
@@ -130,184 +132,16 @@ function restoreError (message) {alert(message); return 0;}
      urllib.urlretrieve(url, filename=save_file)
    
    def loadConfig(self, fn, name):
-     self.tmp_dir = tempfile.mkdtemp(prefix='cradlepointjs')
-   
-     # Fetch the .js files we need from the server (unfortunately they are only available gzipped)
-     files = ["uigenpro.js", "fixup_settings.js", "createdata.js", "pack_all.js"]
-     for f in files:
-       req = urllib2.Request("http://%s/%s"%(self.ipaddr,f))
-       req.add_header('Accept-encoding','gzip')
-       opener = urllib2.build_opener()
-       f_in = opener.open(req)
-       compresseddata = f_in.read()
-       compressedstream = StringIO.StringIO(compresseddata)
-       try:
-         gzipper = gzip.GzipFile(fileobj=compressedstream)
-         data = gzipper.read()
-       except IOError:
-         data = compresseddata
-       f_out = open(self.tmp_dir+"/"+f,"w")
-       f_out.write(data)
-       f_out.close()
-   
-     # Fetch the existing settings from server
-     urllib.urlretrieve("http://%s/save_settings.cgi"%(self.ipaddr), filename=self.tmp_dir+"/server_conf.gws")
-   
-     # Create our override file
-     f_override = open(self.tmp_dir+"/override.js","w")
-   
-     f_override.write("""
-   function executeActiveTags() {}
-   function alert(message) {print("ALERT: " + message);}
-   function restoreError (message) {alert(message); return 0;}
-   """)
-   
-     f_override.close()
-   
-     # Create our main javascript file
-     f_js = open(self.tmp_dir+"/"+"gensettings.js","w")
-   
-     f_js.write("""
-   //Create a window object
-   var window = new Object;
-   """)
-   
-     f_js.write("""
-   //Load .js from server
-   load(""");
-   
-     for f in files[:-1]:
-       f_js.write(""""%s","""%(self.tmp_dir+"/"+f))
-     f_js.write(""""%s");
-   """%(self.tmp_dir+"/"+files[-1]))
-   
-     f_js.write("""
-   // Override some functions as necessary
-   load("%s/override.js");\n
-   """%self.tmp_dir)
-   
-     f_js.write("""
-   // Load server config file
-   load("%s/server_conf.gws");\n
-   """%self.tmp_dir)
-   
-     f_js.write("""
-   // Unpack into data structure
-   byte_array = convertFromBase64 (data);
-   data = null;
-   unpackAll();
-   current_data = data;
-   data = null;
-   unpackAll = null;
-   """)
-   
-     f_js.write("""
-   // Load our config file
-   load("%s");\n
-   """%fn)
-   
-     f_js.write("""
-   if (typeof(data) != "string") {
-       print("Bad configuration file (no data)!");
-       throwError();
-   }
-   
-   byte_array = convertFromBase64 (data);
-   
-   if (typeof(unpackAll) != "function") {
-       print("Bad configuration file (no unpack)!");
-       throwError();
-   }
-   
-   data = null;
-   unpackAll();
-   """)
-   
-     if name is not None:
-       f_js.write("""
-   // Override values for branding!
-   data.wireless.SSID="%s";
-   """%(name,))
-   
-     f_js.write("""
-   // Fixup old settings if necessary
-   if (typeof(fixup_old_settings) == "function") {
-       restored_data = data;
-       data = null;
-       fixup_old_settings();
-       data = restored_data;
-   }
-   
-   // Merge over server instance
-   mergeObject (current_data,data);
-   data = current_data;
-   
-   // Repack
-   byte_array_has_error = 0;
-   packAll();
-   if (byte_array_has_error) {
-       print("Restored data not acceptable");
-       throwError();
-   }
-   
-   // Print output post data so python can grab it
-   print(data.lan_network_address)
-   print(data.password)
-   print(data.wireless.SSID)
-   print(convertToBase64(byte_array))
-   """)
-     f_js.close()
-   
-     # Invoke our javascript and get back the data
-     runjs = subprocess.Popen(["smjs", "-f", self.tmp_dir+"/gensettings.js"], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-     (o,e) = runjs.communicate()
-     res = runjs.wait()
-     data = o.splitlines()
-     new_ip = data[0]
-     new_passwd = data[1]
-     new_ssid   = data[2]
-     new_config = data[3]
-     if res == 0:
-       urllib2.urlopen("http://%s/restore_settings.cgi?link=Tools_Admin.html"%(self.ipaddr),"data=%s"%new_config)
-       cmd = "\x01\x00\x00"
-       cmd_enc = base64.encodestring(cmd).translate(to_wap64)
-       urllib2.urlopen("http://%s/cmd.cgi?data=%s"%(self.ipaddr,cmd_enc))
-     else:
-       print >> sys.stderr, "Error: failure in generating config settings"
-   
-     self.passwd = new_passwd
-     print "Uploaded configuration."
-     print "New ip: %s.  New password: %s.  New SSID: %s."%(new_ip, new_passwd, new_ssid)
-   
-     old_ip = self.ipaddr
-     self.ipaddr = new_ip;
-     self.waitForBoot(old_ip)
+     conf = self.get_config(fn)
+     if name != None:
+        conf['wireless']['SSID'] = name
+     self.put_config(conf)
    
    def changeSSID(self, name):
      config = self.get_config()
      if name != None:
         config['wireless']['SSID'] = name
-     new_config = put_config(config)
-   
-     new_ip = config['lan_network_address']
-     new_passwd = config['password']
-     new_ssid   = config['wireless']['SSID']
-     if new_config != None:
-       urllib2.urlopen("http://%s/restore_settings.cgi?link=Tools_Admin.html"%(self.ipaddr),"data=%s"%new_config)
-       cmd = "\x01\x00\x00"
-       cmd_enc = base64.encodestring(cmd).translate(to_wap64)
-       urllib2.urlopen("http://%s/cmd.cgi?data=%s"%(self.ipaddr,cmd_enc))
-     else:
-       rospy.logerr("Error: failure in generating config settings")
-   
-     self.passwd = new_passwd
-     rospy.loginfo("Uploaded configuration.")
-     rospy.loginfo("New ip: %s.  New password: %s.  New SSID: %s."%(new_ip, new_passwd, new_ssid))
-   
-     old_ip = self.ipaddr
-     self.ipaddr = new_ip
-     self.waitForBoot(old_ip)
-   
+     self.put_config(config)
    
    def waitForBoot(self, oldip):
      # Use ip route to determine if we are likely to still be able to find the router
@@ -355,7 +189,6 @@ in order to talk to the router."""%(if1,".".join(self.ipaddr.split(".")[0:3])))
            break
          else:
            rospy.logerr("Password incorrect!")
-           sys.exit(1)
        except urllib2.HTTPError:
          time.sleep(1)
        except urllib2.URLError:
@@ -377,9 +210,11 @@ in order to talk to the router."""%(if1,".".join(self.ipaddr.split(".")[0:3])))
        return None
      return o
    
-   def get_config(self):
+   def get_config(self, fn=None):
      # Fetch the existing settings from server
-     urllib.urlretrieve("http://%s/save_settings.cgi"%(self.ipaddr), filename=self.tmp_dir+"/server_conf.gws")
+     if fn == None:
+        fn = "%s/server_conf.gws"%self.tmp_dir
+        self.saveConfig(fn)
    
      # Create our main javascript file
      f_js = open(self.tmp_dir+"/unpack.js","w")
@@ -395,7 +230,7 @@ load(%s);
 load("%s/override.js");\n
 
 // Load server config file
-load("%s/server_conf.gws");\n
+load("%s");\n
 
 // Unpack into data structure
 byte_array = convertFromBase64 (data);
@@ -404,7 +239,7 @@ unpackAll();
 
 // Print data as JSON so python can grab it
 print(JSON.stringify(data))
-"""%(self.libs, self.tmp_dir, self.tmp_dir))
+"""%(self.libs, self.tmp_dir, fn))
      f_js.close()
    
      o = self.runjs('unpack.js')
@@ -450,9 +285,30 @@ print(convertToBase64(byte_array))
       o = self.runjs('pack.js')
       if o == None:
          rospy.logerr("Config packing failed")
+         return False
 
-      # TODO: upload to router
-      return o
+      new_config = o
+    
+      new_ip = config['lan_network_address']
+      new_passwd = config['password']
+      new_ssid   = config['wireless']['SSID']
+      if new_config != None:
+        urllib2.urlopen("http://%s/restore_settings.cgi?link=Tools_Admin.html"%(self.ipaddr),"data=%s"%new_config)
+        cmd = "\x01\x00\x00"
+        cmd_enc = base64.encodestring(cmd).translate(to_wap64)
+        urllib2.urlopen("http://%s/cmd.cgi?data=%s"%(self.ipaddr,cmd_enc))
+      else:
+        rospy.logerr("Error: failure in generating config settings")
+        return False
+    
+      self.passwd = new_passwd
+      rospy.loginfo("Uploaded configuration.")
+      rospy.loginfo("New ip: %s.  New password: %s.  New SSID: %s."%(new_ip, new_passwd, new_ssid))
+    
+      old_ip = self.ipaddr
+      self.ipaddr = new_ip
+      self.waitForBoot(old_ip)
+      return True
    
 if __name__ == '__main__':
    c = ctr350('10.68.0.250', 'willow')

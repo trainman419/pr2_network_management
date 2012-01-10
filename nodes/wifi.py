@@ -11,6 +11,19 @@ import ctr350
 def handle_local(req):
    rospy.loginfo('Got local wifi request: %s %s'%(
 	'enable' if req.enabled else "disable", req.ssid))
+   if req.enabled:
+      local_config['wireless']['radio_control'] = 1
+   else:
+      local_config['wireless']['radio_control'] = 0
+   local_config['wireless']['SSID'] = req.ssid
+   if req.security:
+      local_config['wireless']['wpa_enabled'] = 1
+      local_config['wireless']['wpa_psk'] = req.passphrase
+      local_config['wireless']['wpa_mode'] = 3 # 1: WPA, 2: auto, 3: WPA2
+      local_config['wireless']['wpa_cipher'] = 2 # 1: TKIP, 2: AES, 3: TKIP+AES
+   else:
+      local_config['wireless']['wpa_enabled'] = 0
+   local.put_config(local_config)
    return WifiResponse()
 
 def handle_client(req):
@@ -20,13 +33,13 @@ def handle_client(req):
    if req.security != 0:
       client_security['wl0_security_mode'] = 'psk2'
       client_security['wl0_crypto'] = 'aes'
-      client_security['wl0_wl0_wpa_psk'] = req.passphrase
+      client_security['wl0_wpa_psk'] = req.passphrase
       client_security['wl0_wl_unmask'] = 0
       client_security['wl0_wpa_gtk_rekey'] = 3600
    else:
       client_scrurity['wl0_security_mode'] = 'disabled'
       del client_security['wl0_crypto']
-      del client_security['wl0_wl0_wpa_psk']
+      del client_security['wl0_wpa_psk']
       del client_security['wl0_wl_unmask']
       del client_security['wl0_wpa_gtk_rekey']
    client.apply(client_config)
@@ -35,7 +48,13 @@ def handle_client(req):
 
 def handle_local_get(req):
    rospy.loginfo('Local state get')
-   return WifiGetResponse(True, "ssid", 0, "")
+   ssid = local_config['wireless']['SSID'].encode('ascii')
+   sec = local_config['wireless']['wpa_enabled']
+   passphrase = ""
+   if sec != 0:
+      sec = 1
+      passphrase = local_config['wireless']['wpa_psk']
+   return WifiGetResponse(True, ssid, sec, passphrase)
 
 def handle_client_get(req):
    rospy.loginfo('Client state get')
@@ -56,18 +75,24 @@ if __name__ == "__main__":
 
    client_config = client.get_config('Wireless_Basic.asp')
    client_security = client.get_config('WL_WPATable.asp')
-   print client_config
-   print client_security
+#   print client_config
+#   print client_security
+   print "Client Config:"
+   print "SSID:          ", client_config['wl0_ssid']
+   print "Security Mode: ", client_security['wl0_security_mode']
+#   print "Crypto:        ", client_security['wl0_crypto']
+#   print "Passphrase:    ", client_security['wl0_wpa_psk']
+   print
 
    local = ctr350.ctr350('10.68.0.250', 'willow')
    local_config = local.get_config()
-   print local_config
-#     print "IP:          ", data['lan_network_address']
-#     print "Password:    ", data['password']
-#     print "SSID:        ", data['wireless']['SSID']
-#     print "WPA enabled: ", data['wireless']['wpa_enabled']
-#     print "WPA mode:    ", data['wireless']['wpa_mode']
-#     print "WPA key:     ", data['wireless']['wpa_psk']
+   print "Local Config:"
+   print "IP:          ", local_config['lan_network_address']
+   print "Password:    ", local_config['password']
+   print "SSID:        ", local_config['wireless']['SSID']
+   print "WPA enabled: ", local_config['wireless']['wpa_enabled']
+   print "WPA mode:    ", local_config['wireless']['wpa_mode']
+   print "WPA key:     ", local_config['wireless']['wpa_psk']
 
    local_srv = rospy.Service('pr2_wifi/local', Wifi, handle_local)
    client_srv = rospy.Service('pr2_wifi/client', Wifi, handle_client)

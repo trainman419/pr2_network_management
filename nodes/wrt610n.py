@@ -159,7 +159,6 @@ class DDWRT:
       print >> sys.stderr, "\tsudo ifconfig %s:1 %s.X"%(if1,".".join(newip.split(".")[0:3]))
       print >> sys.stderr, ""
       print >> sys.stderr, "in order to talk to the router."
-      sys.exit(1)
   
     fw = "Unknown"
     print "Waiting for router to boot..."
@@ -186,4 +185,3 @@ class DDWRT:
       print "Router has resumed successfully on: %s with firmare: '%s'"%(newip,fw)
     else:
       print >> sys.stderr, "Router has not resumed successfully.  Please go to http://pr.willowgarage.com/wiki/PR2/Admin/Troubleshooting for information on debugging."
-      sys.exit(1)
