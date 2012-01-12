@@ -3,6 +3,7 @@
 import roslib; roslib.load_manifest('pr2_network_management')
 
 from pr2_network_management.srv import *
+from pr2_network_management.msg import *
 import rospy
 
 import wrt610n
@@ -94,8 +95,6 @@ if __name__ == "__main__":
 
    local_srv = rospy.Service('pr2_wifi/local', Wifi, handle_local)
    client_srv = rospy.Service('pr2_wifi/client', Wifi, handle_client)
-#   local_get = rospy.Service('pr2_wifi/local_get', WifiGet, handle_local_get)
-#   client_get = rospy.Service('pr2_wifi/client_get', WifiGet, handle_client_get)
    local_pub = rospy.Publisher('pr2_wifi/local_status', WifiStatus, True)
    client_pub = rospy.Publisher('pr2_wifi/client_status', WifiStatus, True)
    local_publish()
