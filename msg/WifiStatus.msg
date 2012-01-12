@@ -1,0 +1,10 @@
+# set up wireless access point
+bool enabled
+string ssid
+int8 security
+# don't bother with WEP; it isn't secure
+int8 NONE=0
+int8 WPA2=1
+# no support for WPA2 Enterprise
+# passphrase is ignored if security is NONE
+string passphrase
