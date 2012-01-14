@@ -49,7 +49,7 @@ def handle_client(req):
    client_publish()
    return WifiResponse()
 
-def local_publish(req):
+def local_publish():
    rospy.loginfo('Local state publish')
    ssid = local_config['wireless']['SSID'].encode('ascii')
    sec = local_config['wireless']['wpa_enabled']
@@ -59,7 +59,7 @@ def local_publish(req):
       passphrase = local_config['wireless']['wpa_psk']
    local_pub.publish(WifiStatus(True, ssid, sec, passphrase))
 
-def client_publish(req):
+def client_publish():
    rospy.loginfo('Client state publish')
    sec = security[client_security['wl0_security_mode']]
    passphrase = ""
@@ -95,8 +95,8 @@ if __name__ == "__main__":
 
    local_srv = rospy.Service('pr2_wifi/local', Wifi, handle_local)
    client_srv = rospy.Service('pr2_wifi/client', Wifi, handle_client)
-   local_pub = rospy.Publisher('pr2_wifi/local_status', WifiStatus, True)
-   client_pub = rospy.Publisher('pr2_wifi/client_status', WifiStatus, True)
+   local_pub = rospy.Publisher('pr2_wifi/local_status', WifiStatus, latch=True)
+   client_pub = rospy.Publisher('pr2_wifi/client_status', WifiStatus, latch=True)
    local_publish()
    client_publish()
    rospy.loginfo('wifi manager ready')
