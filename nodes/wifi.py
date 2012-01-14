@@ -57,7 +57,8 @@ def local_publish():
    if sec != 0:
       sec = 1
       passphrase = local_config['wireless']['wpa_psk']
-   local_pub.publish(WifiStatus(True, ssid, sec, passphrase))
+   enabled = local_config['wireless']['radio_control'] == 1
+   local_pub.publish(WifiStatus(enabled, ssid, sec, passphrase))
 
 def client_publish():
    rospy.loginfo('Client state publish')
