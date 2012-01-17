@@ -39,11 +39,10 @@ def handle_client(req):
       client_security['wl0_wl_unmask'] = 0
       client_security['wl0_wpa_gtk_rekey'] = 3600
    else:
-      client_scrurity['wl0_security_mode'] = 'disabled'
-      del client_security['wl0_crypto']
-      del client_security['wl0_wpa_psk']
-      del client_security['wl0_wl_unmask']
-      del client_security['wl0_wpa_gtk_rekey']
+      client_security['wl0_security_mode'] = 'disabled'
+      for key in ('wl0_crypto', 'wl0_wpa_psk', 'wl0_wl_unmask', 'wl0_wpa_gtk_rekey'):
+         if key in client_security:
+            del client_security[key]
    client.apply(client_config)
    client.apply(client_security)
    client_publish()
